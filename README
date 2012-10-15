@@ -1,0 +1,5 @@
+TO SETTUP:
+	Type at command line:
+	$ make
+
+	Needs: libxslt and libxml headers
