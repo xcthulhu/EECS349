@@ -10,7 +10,7 @@ virtualenv.py :
 
 venv : virtualenv.py
 	rm -rf $@
-	python virtualenv.py -p python2.7 $@    
+	python2.7 virtualenv.py --system-site-packages -p python2.7 $@    
 
 requirements : freeze.txt venv
 	$(ENV) pip install -r $<

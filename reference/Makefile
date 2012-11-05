@@ -28,11 +28,13 @@ Stanford40 : download/Stanford40_JPEGImages.zip
 	rm -rf $@
 	unzip $<
 	mv JPEGImages $@
+	touch $@
 
 Dogs : download/dogs.tar
 	rm -rf $@
 	tar xfv $<
 	mv Images $@
+	touch $@
 
 clean :
 	rm -rf download Stanford40 JPEGImages
