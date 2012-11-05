@@ -5,13 +5,14 @@ PYTHON=$(ENV) python
 all : deviantart-photos-db 500-means.npy 1000-means.npy
 
 # Extract Histogram of Origiented Gradients
-hogs/Stanford40/%-hog.npy : ../reference/Stanford40/%.jpg
+hogs/%-hog.npy : ../reference/%.jpg
 	@ mkdir -p $(dir $@)
 	$(PYTHON) hog.py $< $@
 
-%-HOGS : 
+%-hogs : ../reference/%
 	@ mkdir -p hogs/$(@:-HOGS=)
-	@ for i in $(wildcard $</*.jpg) ; do $(PYTHON) hog.py $$i hogs/; done
+	@ for i in $</*.jpg; do make `echo $$i | sed -e 's/..\/reference/hogs/' -e 's/.jpg/-hog.npy/'` ; done
+	toch $@
 
 %-means.npy : %-HOGS
 	$(PYTHON) sample_k_means.py $(@:-means.npy=) 0.05 243 $@ hogs/$(<:-HOGS=/*.npy)
