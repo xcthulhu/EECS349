@@ -1,4 +1,3 @@
-*.zip
-*.npy
-JPEGImages/
-Stanford
+venv
+virtualenv.py
+*.pyc

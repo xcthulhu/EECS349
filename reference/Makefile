@@ -2,7 +2,7 @@
 ENV=. venv/bin/activate &&
 PYTHON=$(ENV) python
 
-all : dogs.tar
+all : Stanford40 Dogs Cats
 
 # Dog Database
 download/dogs.tar :
