@@ -1,1 +1,4 @@
 hogs
+*-hogs
+error/
+out/

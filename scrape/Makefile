@@ -6,8 +6,12 @@ all : deviantart-photos
 ../venv :
 	make -C $(dir $@) requirements
 
-%-photos :
-	$(PYTHON) tumblrscraper.py $(@:-photos=) 10000
+%-tag-photos :
+	$(PYTHON) tumblrscraper.py tag $(@:-tag-photos=) 1000000
+	touch $@
+
+%-blog-photos :
+	$(PYTHON) tumblrscraper.py tag $(@:-blog-photos=) 1000000
 	touch $@
 
 clean :

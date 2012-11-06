@@ -1,21 +1,31 @@
 .PRECIOUS: *.npy *.db
 ENV=. ../venv/bin/activate &&
 PYTHON=$(ENV) python
-
-all : deviantart-photos-db 500-means.npy 1000-means.npy
+all : Stanford40-hogs
 
 # Extract Histogram of Origiented Gradients
 hogs/%-hog.npy : ../reference/%.jpg
 	@ mkdir -p $(dir $@)
 	$(PYTHON) hog.py $< $@
 
-%-hogs : ../reference/%
-	@ mkdir -p hogs/$(@:-HOGS=)
-	@ for i in $</*.jpg; do make `echo $$i | sed -e 's/..\/reference/hogs/' -e 's/.jpg/-hog.npy/'` ; done
-	toch $@
+%.sh :
+	cat qsub.tmpl > $@
+	echo "make -C $(CURDIR) $(@:.sh=)" >> $@
+	chmod +x $@
 
-%-means.npy : %-HOGS
-	$(PYTHON) sample_k_means.py $(@:-means.npy=) 0.05 243 $@ hogs/$(<:-HOGS=/*.npy)
+qsub-% : %.sh
+	@ mkdir -p out ; mkdir -p error
+	qsub -o out/$(<:.sh=) -e error/$(<:.sh=) -N $(<:.sh=) $<
+
+%-hogs : ../reference/%
+	@ mkdir -p hogs/$(@:-hogs=)
+	@ for i in $</*.jpg; do make `echo $$i | sed -e 's/..\/reference/hogs/' -e 's/.jpg/-hog.npy/'` ; done
+	touch $@
+
+MEANS=100000
+PERCENTAGE=0.2
+%-means.npy : %-hogs
+	$(PYTHON) sample_k_means.py $(MEANS) $(PERCENTAGE) 243 $@ 'hogs/$(<:-hogs=/*-hog.npy)'
 
 clean :
 	rm -rf *.png *.pgm *.npy *.db *.pyc hogs datasets
