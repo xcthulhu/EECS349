@@ -202,7 +202,6 @@ class Tumblpy(object):
                 url = '%s/%s' % (url, extra_endpoints)
         if tag:
             url = '%stagged' % self.api_url
-        print url
         params, files = _split_params_and_files(params)
         params.update(self.default_params)
 

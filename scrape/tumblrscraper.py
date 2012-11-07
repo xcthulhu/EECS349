@@ -23,9 +23,11 @@ def tumblr_scraper(base_url,db_name,num_images,start_offset=0,limit=20,url_type=
     conn = ts_model.touch_db(db_name)
     c = conn.cursor()
     #scraping...
-    print "Scraping %s" % base_url
-    n = 0
-    i = 0
+    if url_type == 'blog': print "Scraping %s" % base_url
+    else : print "Scraping %s" % tag
+    n = ts_model.photo_count(conn)
+    if url_type == 'tag' : i = ts_model.min_time(conn)
+    else : i = 0
     while n < num_images :
         #get the posts
         if url_type == 'blog':
@@ -34,12 +36,9 @@ def tumblr_scraper(base_url,db_name,num_images,start_offset=0,limit=20,url_type=
             posts = posts['posts']
         if url_type == 'tag':
             print "Get posts %i posts before timestamp %i" % (limit,i)
-            if i == 0:
-                params = {'limit':limit, 'tag':tag};
-            else:
-                params = {'limit':limit, 'tag':tag, 'before':i};
+            params = {'limit':limit, 'tag':tag, 'before':i};
             posts = t.get(None,blog_url=None,tag=True, params=params)
-        i += 1
+        oldi = i
         for p in posts:
           #some posts don't have photo
           if(not('photos' in  p)): continue
@@ -49,24 +48,25 @@ def tumblr_scraper(base_url,db_name,num_images,start_offset=0,limit=20,url_type=
           if(len(p['tags']) == 0): continue
           # If we made it through that, we have a new photo
           n += 1
-          #if we're getting from tag we need timestamp
-          if url_type == 'tag':
-            i = p['timestamp']
+          # we need timestamp
+          i = p['timestamp']
           #print out the info, move to DB later
           tags = [ y.strip().lower() for x in p['tags']
                                      for y in x.split('\n') ]
           url = p['photos'][0]['original_size']['url']
-          #if this is slow, switch to batch execute instead
+          # if this is slow, switch to batch execute instead
           if 'note_count' in p.keys():
               note_count = p['note_count']
           else:
               note_count = -1
-          if tag : print "Found %s %i (notes=%i): %s %s" % (tag, n, note_count, url,
-                                                            "#" + " #".join(tags))
+          if tag : print "At %i found %s %i (notes=%i): %s %s" % (i, tag, n, note_count, url,
+                                                                  "#" + " #".join(tags))
           ts_model.add_tags(c, tags)
-          ts_model.add_photo(c, url, note_count)
+          ts_model.add_photo(c, url, note_count, i)
           ts_model.link_tags_photo(c, tags, url)
           conn.commit()
+        # Decrement the timestamp if it didn't change
+        if oldi == i: i -= limit
     conn.close()
 
 if __name__ == "__main__" :

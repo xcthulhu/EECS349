@@ -3,6 +3,7 @@
 from os.path import exists 
 import sqlite3
 from itertools import product
+import time
 
 def touch_db(filename) :
     if not exists(filename):
@@ -17,6 +18,7 @@ def touch_db(filename) :
         c.execute('''CREATE TABLE IF NOT EXISTS photos
                   (photo_id integer primary key autoincrement, 
                    note_count integer, 
+                   time_stamp integer,
                    url text,
                    unique(url))''')
         c.execute('''CREATE TABLE IF NOT EXISTS photo_tags
@@ -29,31 +31,36 @@ def touch_db(filename) :
         return conn
     else:
         return sqlite3.connect(filename)
+
+def photo_count(c):
+    return c.execute('''SELECT COUNT(*) FROM photos''').fetchone()[0]
+
+def min_time(c):
+   t = c.execute('''SELECT MIN(time_stamp) FROM photos''').fetchone()[0]
+   if t : return t
+   else : return int(time.mktime(time.gmtime()))
         
-def add_tags(c, tags, verbose=None):
+def add_tags(c, tags):
     c.executemany('''INSERT INTO tags (tag)
                      SELECT * FROM (SELECT ?)
                      WHERE NOT EXISTS (
                            SELECT * FROM tags WHERE tag = ?
                      ) LIMIT 1''', [(t,t) for t in tags])
 
-def add_photo(c, url, note_count, verbose=None):
-    c.execute('''INSERT INTO photos (url, note_count)
-                 SELECT * FROM (SELECT ?, ?)
+def add_photo(c, url, note_count, time_stamp):
+    c.execute('''INSERT INTO photos (url, note_count, time_stamp)
+                 SELECT * FROM (SELECT ?, ?, ?)
                  WHERE NOT EXISTS (
                    SELECT * FROM photos WHERE url = ?
-                 ) LIMIT 1''', (url, note_count, url))
+                 ) LIMIT 1''', (url, note_count, time_stamp, url))
 
-def link_tags_photo(c, tags, url, verbose=None):
+def link_tags_photo(c, tags, url):
     photo_id = c.execute('''SELECT photo_id from photos 
                             where url = ? LIMIT 1''', 
                          (url,)).fetchone()[0]
     tag_ids = [ c.execute('''SELECT tag_id from tags 
                              where tag = ? LIMIT 1''', (t,)).fetchone()[0]
                 for t in tags ]
-    if verbose : 
-       for tag_id, photo_id  in product(tags,[url]):
-            print "#%s %s" % (tag_id, photo_id)
     data = [(photo_id,t,photo_id,t) for t in tag_ids]
     c.executemany('''INSERT INTO photo_tags (photo_id, tag_id)
                      SELECT * FROM (SELECT ?, ?)
