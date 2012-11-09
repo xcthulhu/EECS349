@@ -35,6 +35,7 @@ def tumblr_scraper(base_url,db_name,num_images,start_offset=0,limit=20,url_type=
             #print "Get posts %i to %i" % (i*limit+start_offset,(1+i)*limit+start_offset)
             posts = t.get('posts',blog_url=base_url,extra_endpoints='photo', params={'limit':limit, 'offset':i*limit+start_offset})
             posts = posts['posts']
+            i = i + 1
         if url_type == 'tag':
             #print "Get posts %i posts before timestamp %i" % (limit,i)
             params = {'limit':limit, 'tag':tag, 'before':i};
@@ -50,7 +51,7 @@ def tumblr_scraper(base_url,db_name,num_images,start_offset=0,limit=20,url_type=
           # If we made it through that, we have a new photo
           n = ts_model.photo_count(conn)
           # we need timestamp
-          i = p['timestamp']
+          if url_type == 'tag': i = p['timestamp']
           #print out the info, move to DB later
           tags = [ y.strip().lower() for x in p['tags']
                                      for y in x.split('\n') ]
@@ -64,12 +65,14 @@ def tumblr_scraper(base_url,db_name,num_images,start_offset=0,limit=20,url_type=
           ts_model.add_photo(c, url, note_count, i)
           ts_model.link_tags_photo(c, tags, url)
 
-          if n != ts_model.photo_count(conn) and tag:
-            print "@ %i found %s %i (notes=%i): %s %s" % (i, tag, n, note_count, url,
-                                                               "#" + " #".join(tags))
+          #if n != ts_model.photo_count(conn) and tag:
+           # print "@ %i found %s %i (notes=%i): %s %s" % (i, tag, n, note_count, url,
+           #                                                    "#" + " #".join(tags))
           conn.commit()
         # Decrement the timestamp if it didn't change
-        if oldi == i: i -= limit
+        if url_type == 'tag':
+            if oldi == i:
+                i -= limit
     conn.close()
 
 if __name__ == "__main__" :
