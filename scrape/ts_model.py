@@ -69,3 +69,7 @@ def link_tags_photo(c, tags, url):
                          WHERE photo_id = ?
                          AND   tag_id = ?
                      ) LIMIT 1''', data)
+    
+def get_photos(c, start_id = 0):
+    return c.execute('''SELECT * FROM photos
+                 WHERE photo_id >= ?''', (start_id, ))
