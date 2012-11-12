@@ -2,3 +2,7 @@ hogs
 *-hogs
 error/
 out/
+bows/
+*-bows
+*-means
+folds/
