@@ -6,3 +6,4 @@ bows/
 *-bows
 *-means
 folds/
+*.npy
