@@ -36,5 +36,11 @@ Dogs : download/dogs.tar
 	mv Images $@
 	touch $@
 
+Cats : download/CAT_DATASET_01.zip download/CAT_DATASET_02.zip
+	rm -rf $@
+	mkdir -p $@
+	for i in $^ ; do unzip -d $@ $$i ; done
+	
+
 clean :
 	rm -rf download Stanford40 JPEGImages
