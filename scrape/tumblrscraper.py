@@ -5,7 +5,7 @@ import sqlite3
 import ts_model
 import sys
 
-def tumblr_scraper(base_url,db_name,num_images,start_offset=0,limit=20,url_type='blog',tag=None):
+def tumblr_scraper(base_url,db_name,num_images,start_offset=0,limit=20,url_type='blog',tag=None,timeout=1000):
     #init with some key
     t = tumblpy.Tumblpy(app_key = 'V55FKUe1lMSdx0UyGSFknmO8DoSaeNzT9oByUwOE1Hvp7diQJ7',
                         app_secret = 'TD9eTgRhoo8ceu0cjcF0nROWAAMkst1uAkSx5XuSOjnYxrGq50',
@@ -51,7 +51,12 @@ def tumblr_scraper(base_url,db_name,num_images,start_offset=0,limit=20,url_type=
           # If we made it through that, we have a new photo
           n = ts_model.photo_count(conn)
           # we need timestamp
+<<<<<<< HEAD
+          if tag : i = p['timestamp']
+          else : i += 1
+=======
           if url_type == 'tag': i = p['timestamp']
+>>>>>>> 4d0e9a17e5741e3587f9867765a22367d974f232
           #print out the info, move to DB later
           tags = [ y.strip().lower() for x in p['tags']
                                      for y in x.split('\n') ]
@@ -62,17 +67,15 @@ def tumblr_scraper(base_url,db_name,num_images,start_offset=0,limit=20,url_type=
           else:
               note_count = -1
           ts_model.add_tags(c, tags)
-          ts_model.add_photo(c, url, note_count, i)
+          ts_model.add_photo(c, url, note_count, p['timestamp'])
           ts_model.link_tags_photo(c, tags, url)
 
-          #if n != ts_model.photo_count(conn) and tag:
-           # print "@ %i found %s %i (notes=%i): %s %s" % (i, tag, n, note_count, url,
-           #                                                    "#" + " #".join(tags))
+          if n != ts_model.photo_count(conn) and tag:
+            print "@ %i found %s %i (notes=%i): %s %s" % (i, tag, n, note_count, url,
+                                                               "#" + " #".join(tags))
           conn.commit()
         # Decrement the timestamp if it didn't change
-        if url_type == 'tag':
-            if oldi == i:
-                i -= limit
+        if oldi == i: i -= limit
     conn.close()
 
 if __name__ == "__main__" :

@@ -1,4 +1,11 @@
-hogs
-*-hogs
+bows/
 error/
+folds/
+hogs/
 out/
+scripts/
+*-hogs
+*-bows
+*-means
+*-folds
+*.npy
