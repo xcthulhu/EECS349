@@ -4,8 +4,5 @@ folds/
 hogs/
 out/
 scripts/
-*-hogs
-*-bows
-*-means
-*-folds
 *.npy
+*Stanford40*
