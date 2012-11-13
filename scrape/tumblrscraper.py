@@ -23,21 +23,21 @@ def tumblr_scraper(base_url,db_name,num_images,start_offset=0,limit=20,url_type=
     conn = ts_model.touch_db(db_name)
     c = conn.cursor()
     #scraping...
-    if url_type == 'blog': 
-       print "%s database has %i entries" % (base_url,ts_model.photo_count(conn))
-    else : 
-       print "%s database has %i entries" % (tag,ts_model.photo_count(conn))
+    if url_type == 'blog': print "Scraping %s" % base_url
+    else : print "Scraping %s" % tag
     if url_type == 'tag' : i = ts_model.min_time(conn)
     else : i = 0
-    silent_time = 0
+    if ts_model.photo_count(conn) > 0 :
+       print "Database has %i entries" % ts_model.photo_count(conn)
     while ts_model.photo_count(conn) < num_images :
         #get the posts
         if url_type == 'blog':
-            print "Get posts %i to %i" % (i*limit+start_offset,(1+i)*limit+start_offset)
+            #print "Get posts %i to %i" % (i*limit+start_offset,(1+i)*limit+start_offset)
             posts = t.get('posts',blog_url=base_url,extra_endpoints='photo', params={'limit':limit, 'offset':i*limit+start_offset})
             posts = posts['posts']
+            i = i + 1
         if url_type == 'tag':
-            print "%s : get %i posts before timestamp %i" % (tag,limit,i)
+            #print "Get posts %i posts before timestamp %i" % (limit,i)
             params = {'limit':limit, 'tag':tag, 'before':i};
             posts = t.get(None,blog_url=None,tag=True, params=params)
         oldi = i
@@ -51,8 +51,12 @@ def tumblr_scraper(base_url,db_name,num_images,start_offset=0,limit=20,url_type=
           # If we made it through that, we have a new photo
           n = ts_model.photo_count(conn)
           # we need timestamp
+<<<<<<< HEAD
           if tag : i = p['timestamp']
           else : i += 1
+=======
+          if url_type == 'tag': i = p['timestamp']
+>>>>>>> 4d0e9a17e5741e3587f9867765a22367d974f232
           #print out the info, move to DB later
           tags = [ y.strip().lower() for x in p['tags']
                                      for y in x.split('\n') ]
@@ -71,12 +75,7 @@ def tumblr_scraper(base_url,db_name,num_images,start_offset=0,limit=20,url_type=
                                                                "#" + " #".join(tags))
           conn.commit()
         # Decrement the timestamp if it didn't change
-        if oldi == i: 
-           i -= limit
-           silent_time += limit
-        else :
-           silent_time = 0
-        if silent_time >= timeout : break
+        if oldi == i: i -= limit
     conn.close()
 
 if __name__ == "__main__" :
