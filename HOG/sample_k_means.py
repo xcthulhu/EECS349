@@ -7,6 +7,11 @@ import numpy as np
 from sklearn.cluster import MiniBatchKMeans
 from random import shuffle
 
+import os
+def touch(fname, times=None):
+    with file(fname, 'a'):
+        os.utime(fname, times)
+
 def load_fraction(fn, frac=.1, shape=None) :
     "Loads a random fraction of vectors from a .npy file"
     try : 
@@ -26,6 +31,13 @@ if __name__ == "__main__":
     frac = float(sys.argv[2])
     shape = (-1,int(sys.argv[3]))
     outfn = sys.argv[4]
+
+    if exists(outfn) :
+       dims = np.shape(np.load(outfn))[2]
+       if dims == shape[1]: 
+          print outfn, "exists and has shape ", dims, "- exiting"
+          touch(outfn)
+          exit()
 
     # Get files
     if exists(sys.argv[5]) :
