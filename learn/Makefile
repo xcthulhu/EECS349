@@ -1,23 +1,42 @@
 .PRECIOUS: folds-hogs-Stanford40 folds/reference/Stanford40
 BASEDIR=..
-ENV=. $(BASEDIR)/venv/bin/activate && env LD_LIBRARY_PATH=$(BASEDIR)/venv/lib:$(BASEDIR)/venv/lib64/:${LD_LIBRARY_PATH}
-PYTHON=$(ENV) python
-all : Stanford40-hogs-means
+include make_templates/master.mk
+
+all : folds/Stanford40
+# Distribute work on QUEST
+scripts/qsub-%.sh :
+	@ mkdir -p $(dir $@)
+	cat qsub.tmpl > $@
+	echo "make -C $(CURDIR) $(patsubst scripts/qsub-%.sh,%,$@)" >> $@
+	chmod +x $@
+
+qsub-% : 
+	@ mkdir -p out ; mkdir -p error
+	make scripts/$@.sh
+	qsub -o out/$@ -e error/$@ -N $@ scripts/$@.sh
 
 # Get K-Folds
-FOLDS=40
-folds/reference/% : ../reference/%
+FOLDS=20
+folds/% : ../reference/%
 	$(PYTHON) ./k-fold_cross.py $(FOLDS) '$</*.jpg' $@
+	@ for d in $@/* ; do \
+		echo "echo BASEDIR=$(BASEDIR)/../../.. > $$d/Makefile" ; \
+		echo BASEDIR=$(BASEDIR)/../../.. > $$d/Makefile ; \
+		echo "echo REFERENCE=$(notdir $@) >> $$d/Makefile" ; \
+		echo REFERENCE=$(notdir $@) >> $$d/Makefile ; \
+		echo "echo include \"\$$(BASEDIR)/learn/make_templates/fold.mk\" >> $$d/Makefile" ; \
+		echo include "\$$(BASEDIR)/learn/make_templates/fold.mk" >> $$d/Makefile ; \
+	done
 
-folds/reference/%.txt : folds/%
+folds_% :
+	make $(shell echo $@ | cut -d'_' -f1,2 | sed -e 's/_/\//g')
+	make -C $(shell echo $@ | sed -e 's/_/\//g')
 
-folds/hogs/% : folds/reference/%
-	@ mkdir -p $(dir $@)
-	sed -e 's/..\/reference/hogs/' -e 's/.jpg$$/-hog.npy/' $< > $@
-
-folds-hogs-% : folds/reference/%
-	@ for f in $</*.txt ; do make $(shell echo $@ | sed -e 's/-/\//g')/`basename $$f` ; done
-	touch $@
+folds-%-qsub : folds/%
+	@ for d in $</* ; do \
+		echo make qsub-`echo $$d | sed -e 's/\//_/g'` ; \
+		make qsub-`echo $$d | sed -e 's/\//_/g'` ; \
+	done
 
 # Extract Histogram of Oriented Gradients
 hogs/%-hog.npy : ../reference/%.jpg
@@ -29,21 +48,7 @@ hogs-% : ../reference/%
 	@ for i in $</*.jpg; do make `echo $$i | sed -e 's/..\/reference/hogs/' -e 's/.jpg/-hog.npy/'` ; done
 	touch $@
 
-# Distribute work on QUEST
-scripts/%_qsub.sh :
-	@ mkdir -p $(dir $@)
-	cat qsub.tmpl > $@
-	echo "make -C $(CURDIR) $(patsubst scripts/%-qsub.sh,%,$@)" >> $@
-	chmod +x $@
-
-%_qsub : 
-	@ mkdir -p out ; mkdir -p error
-	make scripts/$@.sh
-	qsub -o out/$@ -e error/$@ -N $@ scripts/$@
-
 # Get K-Means
-MEANS=500
-PERCENTAGE=0.02
 means-% : folds-%
 	@ for f in $(shell echo $< | sed -e 's/-/\//g')/*-train.txt ; do make `echo $$f | sed -e 's/folds\/\(.*\)-train.txt$$/means\/\1-means-$(MEANS)-$(PERCENTAGE).npy/'` ; done
 	touch $@
