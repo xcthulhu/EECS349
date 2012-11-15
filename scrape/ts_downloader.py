@@ -14,11 +14,16 @@ def download(db_name, directory, start_id=0):
     if not os.path.exists(directory):
         os.makedirs(directory)
     for photo in  ts_model.get_photos(c, start_id):
-        filename = str(photo[0]) + '.' + photo[3].split('.')[-1]
+	#no gif
+	if photo[3].split('.')[-1] == 'gif':
+		continue
+        filename = photo[3].split('/')[-1]
         outpath = os.path.join(directory, filename)
-        print 'Downloading %s' % photo[3]
-        urlretrieve(photo[3], outpath)
-        print 'Save as %s' % filename
+	#never downloaded
+	if not os.path.exists(outpath) : 
+        	print 'Downloading %s' % photo[3]
+        	urlretrieve(photo[3], outpath)
+        	print 'Save as %s' % filename
 
 if __name__ == "__main__":
     db_name = sys.argv[1] + '.db'
