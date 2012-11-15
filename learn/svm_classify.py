@@ -15,21 +15,30 @@ def uniq(lst):
          u.append(x)
    return u
 
-def file_classes(files):
+def file_classes(train_files, test_files):
    "Computes the classes for a list of files"
-   file_classes = [ basename('_'.join(f.split('_')[:-1])) 
-                    for f in files ]
-   classes = uniq(file_classes)
+   train_classes = [ basename('_'.join(f.split('_')[:-1])) 
+                     for f in train_files ]
+   test_classes = [ basename('_'.join(f.split('_')[:-1])) 
+                    for f in test_files ]
+   classes = uniq(train_classes + test_classes)
    class_enum = dict(zip(classes,range(len(classes))))
-   return np.array([class_enum[file_classes[i]]
-                    for i in range(len(files))])
+   return (np.array([class_enum[cls]
+                     for cls in train_classes]),
+           np.array([class_enum[cls]
+                     for cls in test_classes]))
 
 if __name__ == "__main__":
-   files = glob.glob(sys.argv[1])
-   classes = file_classes(files)
-   data = np.array([np.load(f) for f in files])
-   # FIXME: Do cross validation to gather statistics
-   clf = svm.SVC()
-   clf.fit(data,classes)
-   pred = clf.predict(data)
-   print "Correct:", np.sum(pred == classes) , '/', len(classes), ':', np.sum(pred == classes) * 1.0 / len(classes)
+   train_files = glob.glob(sys.argv[1])
+   test_files = glob.glob(sys.argv[2])
+   train_classes, test_classes = file_classes(train_files,test_files)
+   costs = map(float,sys.argv[3:])
+   train_data = np.array([np.load(f) for f in train_files])
+   #test_data = np.array([np.load(f) for f in test_files])
+   test_data = train_data
+   for C in costs:
+     clf = svm.SVC(C=C)
+     print train_data.shape, train_classes.shape
+     clf.fit(train_data,train_classes)
+     pred = clf.predict(test_data)
+     print "Cost:", C, "Correct:", np.sum(pred == test_classes) , '/', len(test_classes), '=', np.mean(pred == test_classes) 

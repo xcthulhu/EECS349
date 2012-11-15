@@ -2,3 +2,4 @@ ENV=. $(BASEDIR)/venv/bin/activate && env LD_LIBRARY_PATH=$(BASEDIR)/venv/lib:$(
 PYTHON=$(ENV) python
 MEANS=500
 PERCENTAGE=0.02
+FLANN_PRECISION=0.97
