@@ -51,12 +51,7 @@ def tumblr_scraper(base_url,db_name,num_images,start_offset=0,limit=20,url_type=
           # If we made it through that, we have a new photo
           n = ts_model.photo_count(conn)
           # we need timestamp
-<<<<<<< HEAD
           if tag : i = p['timestamp']
-          else : i += 1
-=======
-          if url_type == 'tag': i = p['timestamp']
->>>>>>> 4d0e9a17e5741e3587f9867765a22367d974f232
           #print out the info, move to DB later
           tags = [ y.strip().lower() for x in p['tags']
                                      for y in x.split('\n') ]

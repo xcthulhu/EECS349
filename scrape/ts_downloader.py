@@ -4,7 +4,7 @@ import ts_model
 from urllib import urlretrieve
 import os
 import sys
-
+import imghdr
 def download(db_name, directory, start_id=0):
     #get db connection
     print "Connecting to %s" % db_name
@@ -24,6 +24,12 @@ def download(db_name, directory, start_id=0):
         	print 'Downloading %s' % photo[3]
         	urlretrieve(photo[3], outpath)
         	print 'Save as %s' % filename
+		#check file content
+		type = imghdr.what(outpath)
+		if not (type == 'png' or type == 'jpeg'):
+			print 'File %s has been removed' % filename
+			os.remove(outpath)
+			
 
 if __name__ == "__main__":
     db_name = sys.argv[1] + '.db'
