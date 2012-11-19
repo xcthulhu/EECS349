@@ -1,25 +1,32 @@
-.PRECIOUS : 
+.SECONDARY:
 include $(BASEDIR)/learn/make_templates/master.mk
 all : hog-features
-hog-features : hogs-test hogs-train hogs/means.npy hogs/means.flann bag_of_words-flann-hogs bag_of_words-true-hogs 
+hog-features : hogs/test.txt hogs/train.txt hogs/means.npy hogs/means.flann bag_of_words-flann-hogs bag_of_words-true-hogs
+sift-features : sifts/test.txt sifts/train.txt sifts/means.npy sifts/means.flann bag_of_words-flann-sifts bag_of_words-true-sifts
 
-hogs-% : %.txt
+hogs/%.txt sifts/%.txt : %.txt
+	@ mkdir -p $(dir $@)
+	rm -f $@
 	@ while read line; do \
-		echo make hogs/$(<:.txt=)/`basename $$line | sed -e 's/.jpg$$/.npy/'` ; \
-		make hogs/$(<:.txt=)/`basename $$line | sed -e 's/.jpg$$/.npy/'` ; \
+		echo make $(BASEDIR)/learn/$(dir $@)/$(REFERENCE)/`basename $$line | sed -e 's/.jpg$$/.npy/'` ; \
+		make $(BASEDIR)/learn/$(dir $@)/$(REFERENCE)/`basename $$line | sed -e 's/.jpg$$/.npy/'` ; \
+		echo "echo $(BASEDIR)/learn/$(dir $@)/$(REFERENCE)/`basename $$line | sed -e 's/.jpg$$/.npy/'` >> $@" ; \
+		echo $(BASEDIR)/learn/$(dir $@)/$(REFERENCE)/`basename $$line | sed -e 's/.jpg$$/.npy/'` >> $@ ; \
 	done < $<
-	touch $@
 
 $(BASEDIR)/learn/hogs/$(REFERENCE)/%.npy :
 	make -C $(BASEDIR)/learn hogs/$(REFERENCE)/$(notdir $@)
-	
-hogs/train/%.npy hogs/test/%.npy : $(BASEDIR)/learn/hogs/$(REFERENCE)/%.npy
-	@ mkdir -p $(dir $@)
-	ln -s $(shell python -c 'import os ; print os.path.abspath("$<")') $@
 
-%/means.npy : %-train
+$(BASEDIR)/learn/sifts/$(REFERENCE)/%.npy :
+	make -C $(BASEDIR)/learn sifts/$(REFERENCE)/$(notdir $@)
+
+hogs/means.npy : %/train.txt
 	@ mkdir -p $(dir $@)
-	$(PYTHON) $(BASEDIR)/learn/sample_k_means.py $(MEANS) $(PERCENTAGE) 243 $@ '$(<:-train=)/train/*.npy'
+	$(PYTHON) $(BASEDIR)/learn/sample_k_means.py $(MEANS) $(HOG_PERCENTAGE) $(HOG_DIMENSIONS) $@ $<
+
+sifts/means.npy : %/train.txt
+	@ mkdir -p $(dir $@)
+	$(PYTHON) $(BASEDIR)/learn/sample_k_means.py $(MEANS) $(SIFT_PERCENTAGE) $(SIFT_DIMENSIONS) $@ $<
 
 %/means.flann : %/means.npy
 	$(PYTHON) $(BASEDIR)/learn/mk_flann.py $(FLANN_PRECISION) $< $@ $@.params
@@ -27,26 +34,26 @@ hogs/train/%.npy hogs/test/%.npy : $(BASEDIR)/learn/hogs/$(REFERENCE)/%.npy
 %/means.flann.params : %/means.flann
 
 bag_of_words-% : bows-%-train bows-%-test
-	echo $@
-
-bows-flann-%-train : %/means.npy %/means.flann %/means.flann.params %-train
-	@ mkdir -p $(shell echo $@ | sed -e 's/-/\//g')
-	$(PYTHON) $(BASEDIR)/learn/bow_flann.py $< $(<:.npy=.flann) $(<:.npy=.flann.params) '$(patsubst bows-flann-%-train,%/train,$@)/*.npy' $(shell echo $@ | sed -e 's/-/\//g')
 	touch $@
 
-bows-flann-%-test : %/means.npy %/means.flann %/means.flann.params %-test
+bows-flann-%-train : %/means.npy %/means.flann %/means.flann.params
 	@ mkdir -p $(shell echo $@ | sed -e 's/-/\//g')
-	$(PYTHON) $(BASEDIR)/learn/bow_flann.py $< $(<:.npy=.flann) $(<:.npy=.flann.params) '$(patsubst bows-flann-%-test,%/test,$@)/*.npy' $(shell echo $@ | sed -e 's/-/\//g')
+	$(PYTHON) $(BASEDIR)/learn/bow_flann.py $< $(<:.npy=.flann) $(<:.npy=.flann.params) '$(patsubst bows-flann-%-train,%/train,$@).txt' $(shell echo $@ | sed -e 's/-/\//g')
 	touch $@
 
-bows-true-%-train : %/means.npy %-train
+bows-flann-%-test : %/means.npy %/means.flann %/means.flann.params
 	@ mkdir -p $(shell echo $@ | sed -e 's/-/\//g')
-	$(PYTHON) $(BASEDIR)/learn/bow_slow.py $< '$(patsubst bows-true-%-train,%/train,$@)/*.npy' $(shell echo $@ | sed -e 's/-/\//g')
+	$(PYTHON) $(BASEDIR)/learn/bow_flann.py $< $(<:.npy=.flann) $(<:.npy=.flann.params) '$(patsubst bows-flann-%-test,%/test,$@).txt' $(shell echo $@ | sed -e 's/-/\//g')
 	touch $@
 
-bows-true-%-test : %/means.npy %-test
+bows-true-%-train : %/means.npy
 	@ mkdir -p $(shell echo $@ | sed -e 's/-/\//g')
-	$(PYTHON) $(BASEDIR)/learn/bow_slow.py $< '$(patsubst bows-true-%-test,%/test,$@)/*.npy' $(shell echo $@ | sed -e 's/-/\//g')
+	$(PYTHON) $(BASEDIR)/learn/bow_slow.py $< '$(patsubst bows-true-%-train,%/train,$@).txt' $(shell echo $@ | sed -e 's/-/\//g')
+	touch $@
+
+bows-true-%-test : %/means.npy
+	@ mkdir -p $(shell echo $@ | sed -e 's/-/\//g')
+	$(PYTHON) $(BASEDIR)/learn/bow_slow.py $< '$(patsubst bows-true-%-test,%/test,$@).txt' $(shell echo $@ | sed -e 's/-/\//g')
 	touch $@
 
 clean :

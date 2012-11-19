@@ -26,12 +26,16 @@ def mk_bow(features,label_fun,target_len,destfn):
      len(np.load(destfn,mmap_mode='r')) == target_len :
      print "Already wrote %s, skipping" % destfn
      return
-  labels = label_fun(features)
-  # Compute a label histogram
-  hist = np.bincount(labels,minlength=target_len)
-  # Save to file
-  np.save(destfn,hist)
-  print "Wrote", destfn, "shape:", np.shape(hist)
+  try :
+    labels = label_fun(features)
+    # Compute a label histogram
+    hist = np.bincount(labels,minlength=target_len)
+    # Save to file
+    np.save(destfn,hist)
+    print "Wrote", destfn, "shape:", np.shape(hist)
+  except:
+    print "Unexpected error:", sys.exc_info()[0]
+    print "Skipping", destfn
 
 if __name__ == "__main__":
   # Load clusters
@@ -43,7 +47,7 @@ if __name__ == "__main__":
   label_fun = lambda f : slowly_label_data(f,clusters)
 
   # Make the Bags of Words
-  for fn in files:
+  for fn in reversed(list(files)):
     features = np.load(fn)
     destfn = os.path.join(sys.argv[3],os.path.basename(fn))
     mk_bow(features,label_fun,len(clusters),destfn)

@@ -1,8 +1,9 @@
-.PRECIOUS: folds-hogs-Stanford40 folds/reference/Stanford40
+.SECONDARY :
 BASEDIR=..
 include make_templates/master.mk
 
 all : folds/Stanford40
+
 # Distribute work on QUEST
 scripts/qsub-%.sh :
 	@ mkdir -p $(dir $@)
@@ -16,7 +17,7 @@ qsub-% :
 	qsub -o out/$@ -e error/$@ -N $@ scripts/$@.sh
 
 # Get K-Folds
-FOLDS=20
+FOLDS=40
 folds/% : ../reference/%
 	$(PYTHON) ./k-fold_cross.py $(FOLDS) '$</*.jpg' $@
 	@ for d in $@/* ; do \
@@ -43,9 +44,18 @@ hogs/%.npy : ../reference/%.jpg
 	@ mkdir -p $(dir $@)
 	$(PYTHON) hog.py $< $@
 
+sifts/%.npy : ../reference/%.jpg
+	@ mkdir -p $(dir $@)
+	$(PYTHON) convert_to_pgm.py $< | siftfast | ./sift.py $@
+
 hogs-% : ../reference/%
-	@ mkdir -p hogs/$(@:-hogs=)
+	@ mkdir -p $(shell echo $@ | sed -e 's/-/\//g')
 	@ for i in $</*.jpg; do make `echo $$i | sed -e 's/..\/reference/hogs/' -e 's/.jpg/.npy/'` ; done
+	touch $@
+
+sifts-% : ../reference/%
+	@ mkdir -p $(shell echo $@ | sed -e 's/-/\//g')
+	@ for i in $</*.jpg; do make `echo $$i | sed -e 's/..\/reference/sifts/' -e 's/.jpg/.npy/'` ; done
 	touch $@
 
 clean :

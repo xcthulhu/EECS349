@@ -6,36 +6,34 @@ import glob
 import numpy as np
 from sklearn.cluster import MiniBatchKMeans
 from random import shuffle
-
 import os
+
 def touch(fname, times=None):
     with file(fname, 'a'):
         os.utime(fname, times)
 
-def load_fraction(fn, frac=.1, shape=None) :
+def load_fraction(fn, frac=.1,dims=None) :
     "Loads a random fraction of vectors from a .npy file"
     try : 
-        if shape :
-            data = np.reshape(np.load(fn),shape)
-        else :
-            data = np.load(fn, mmap_mode='r')
-        idx = np.arange(len(data))
+        data = np.load(fn, mmap_mode='r')
+        if dims : assert data.shape[1] == dims
+        rows = data.shape[0]
+        idx = np.arange(rows)
         np.random.shuffle(idx)
-        return data[idx[:int(len(data)*frac)]]
+        return data[idx[:int(rows*frac)]]
     except :
         print "Could not load %s" % fn
-        return np.zeros(0)
+        return None
 
 if __name__ == "__main__":
     n_clusters = int(sys.argv[1])
     frac = float(sys.argv[2])
-    shape = (-1,int(sys.argv[3]))
+    dims = int(sys.argv[3])
     outfn = sys.argv[4]
 
     if exists(outfn) :
-       dims = np.shape(np.load(outfn))[2]
-       if dims == shape[1]: 
-          print outfn, "exists and has shape ", dims, "- exiting"
+       if np.load(outfn).shape[1] == dims: 
+          print outfn, "exists and has", dims, "dimension - exiting"
           touch(outfn)
           exit()
 
@@ -45,10 +43,19 @@ if __name__ == "__main__":
        files = [l.strip() for l in fp.readlines()]
        fp.close()
     else : files = glob.glob(sys.argv[5])
-
     print "Loading %i files" % len(files)
-    data = np.vstack(map(lambda fn : load_fraction(fn, frac=frac, shape=shape), 
-                         files))
+    # Get data
+    raw_data = [ d for d in map(lambda fn : 
+                   load_fraction(fn, 
+                                 frac=frac,
+                                 dims=dims), 
+                   files)
+                 if d != None and d.shape[1] == dims ]
+    try :
+        data = np.vstack(raw_data)
+    except :
+        import code
+	code.InteractiveConsole(locals=globals()).interact()
     #data = np.vstack(map(np.load,files))
     print "Loaded %i vectors from %i files" % (len(data), len(files))
 

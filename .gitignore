@@ -1,7 +1,8 @@
 .DS_Store
 flann
+libsiftfast
+requirements
 venv
 virtualenv.py
 *.pyc
-requirements
 *.pdf

@@ -1,4 +1,4 @@
-TumblrScraper
+EECS349 Project
 =============
 
 Scrape images on tumblr with tags and notes
