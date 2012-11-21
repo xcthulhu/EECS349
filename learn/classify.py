@@ -2,9 +2,10 @@
 import glob
 import sys
 import numpy as np
-from sklearn import svm
+#from sklearn import svm
+from sklearn.naive_bayes import GaussianNB, MultinomialNB, BernoulliNB
+from sklearn.neighbors import KNeighborsClassifier
 from sklearn.linear_model import SGDClassifier
-from sklearn.preprocessing import Scaler
 from os.path import basename
 from collections import defaultdict
 from bow_slow import load_filenames
@@ -43,10 +44,14 @@ def read_data(files,d,dims):
     return (np.vstack(map(lambda x: x[0], data)),
             np.array(map(lambda x: x[1], data)))
 
-def test_classifier(train_data, test_data, clf, txt):
+def test_classifier(train_data, train_classes, test_data, test_classes, txt, clf):
    clf.fit(train_data,train_classes)
    pred = clf.predict(test_data)
-   return txt + "\t%f" % pred
+   return txt + "\t%f" % np.mean(pred == test_classes)
+
+def rescale(X):
+    "Rescales a matrix X of vectors v"
+    return (np.float64(X.T) / np.sum(X,1)).T
 
 if __name__ == "__main__":
    # Get Data
@@ -56,40 +61,41 @@ if __name__ == "__main__":
    print "Computing classes... " ; sys.stdout.flush()
    d = class_dict(train_files+test_files)
    print len(uniq(d.values())), "classes computed"
-   print "Reading %i training examples... " % len(train_files) ; sys.stdout.flush()
+   print "Reading %i training examples... " % len(train_files), ; sys.stdout.flush()
    train_data,train_classes = read_data(train_files,d,dims)
    print "done"
-   print "Reading %i testing examples... " % len(test_files) ; sys.stdout.flush()
+   print "Reading %i testing examples... " % len(test_files), ; sys.stdout.flush()
    test_data,test_classes = read_data(test_files,d,dims)
    print "done"
-   # Rescale data
-   sys.stdout.write("Rescaling to training data... ")
-   scaler = Scaler()
-   scaler.fit(train_data)  
-   train_data = scaler.transform(train_data)
-   test_data = scaler.transform(test_data)
-   print "done"
-   if train_data.shape[0] == train_classes.shape[0] :
-      print "Training using %i vectors of dimension %i" % train_data.shape
-   else :
-      print >>sys.stderr, "Error in computing training classes", \
-                           "- train_data.shape =", train_data.shape, \
-                           "- train_classes.shape =", train_classes.shape
-      exit()
-   if test_data.shape[0] == test_data.shape[0] :
-      print "Training using %i vectors of dimension %i" % test_data.shape
-   else :
-      print >>sys.stderr, "Error in computing testing classes", \
-                           "- test_data.shape =", test_data.shape, \
-                           "- test_classes.shape =", test_classes.shape
-      exit()
-   
-   test_results = map(lambda p: test_classifier(test_data,train_data,p[0],p[1]),
-                      [("SGD_hinge_l2",SGDClassifier(loss="hinge", penalty="l2")),
-                       ("SGD_hinge_l1",SGDClassifier(loss="hinge", penalty="l1")),
-                       ("SGD_hinge_elasticnet",SGDClassifier(loss="hinge", penalty="elasticnet"))])
 
-   print "\n".join(test_results)
-   #for C in costs:
-   #  print "Cost:", C 
-   #  clf = svm.SVC(C=C)
+   classifiers = [
+                  ("SGD_hinge_l1",SGDClassifier(loss="hinge", penalty="l1")),
+                  ("SGD_hinge_l2",SGDClassifier(loss="hinge", penalty="l2")),
+                  ("SGD_hinge_elasticnet",SGDClassifier(loss="hinge", penalty="elasticnet")),
+                  ("SGD_modified_huber_l1",SGDClassifier(loss="modified_huber", penalty="l1")),
+                  ("SGD_modified_huber_l2",SGDClassifier(loss="modified_huber", penalty="l2")),
+                  ("SGD_modified_huber_elasticnet",SGDClassifier(loss="modified_huber", penalty="elasticnet")),
+                  ("SGD_log_l1",SGDClassifier(loss="log", penalty="l1")),
+                  ("SGD_log_l2",SGDClassifier(loss="log", penalty="l2")),
+                  ("SGD_log_elasticnet",SGDClassifier(loss="log", penalty="elasticnet")),
+                  ("GaussianNB",GaussianNB()),
+                  ("MultinomialNB",MultinomialNB()),
+                  ("BernoulliNB",BernoulliNB()),
+                  ("5NN-uniform",(KNeighborsClassifier(5,'uniform')))
+                 ]
+
+   test_results1 = map(lambda p: test_classifier(train_data,train_classes,test_data,test_classes,p[0],p[1]),
+                       classifiers)
+   out1 = open(sys.argv[4],'w')
+   out1.write("\n".join(test_results1))
+   out1.close()
+   # Rescale data
+   print "Rescaling to training data...", ; sys.stdout.flush()
+   train_data_scale = rescale(train_data)
+   test_data_scale = rescale(test_data)
+   print "done"
+   test_results2 = map(lambda p: test_classifier(train_data_scale,train_classes,test_data_scale,test_classes,p[0],p[1]),
+                       classifiers) 
+   out2 = open(sys.argv[5],'w')
+   out2.write("\n".join(test_results2))
+   out2.close()
