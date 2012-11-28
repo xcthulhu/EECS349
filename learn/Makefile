@@ -2,7 +2,7 @@
 BASEDIR=..
 include make_templates/master.mk
 
-all : folds/Stanford40
+all : folds/Stanford40 folds/eecs_data
 
 # Distribute work on QUEST
 scripts/qsub-%.sh :
@@ -18,8 +18,8 @@ qsub-% :
 
 # Get K-Folds
 FOLDS=40
-folds/% : ../reference/%
-	$(PYTHON) ./k-fold_cross.py $(FOLDS) '$</*.jpg' $@
+folds/% : %.tsv
+	$(PYTHON) ./k-fold_cross.py $(FOLDS) $< $@
 	@ for d in $@/* ; do \
 		echo "echo BASEDIR=$(BASEDIR)/../../.. > $$d/Makefile" ; \
 		echo BASEDIR=$(BASEDIR)/../../.. > $$d/Makefile ; \
@@ -40,22 +40,17 @@ folds-%-qsub : folds/%
 	done
 
 # Extract Histogram of Oriented Gradients
-hogs/%.npy : ../reference/%.jpg
+hogs/%.npy : %
 	@ mkdir -p $(dir $@)
 	$(PYTHON) hog.py $< $@
 
-sifts/%.npy : ../reference/%.jpg
+sifts/%.npy : %
 	@ mkdir -p $(dir $@)
 	$(PYTHON) convert_to_pgm.py $< | siftfast | ./sift.py $@
 
-hogs-% : ../reference/%
+hogs-% sifts-% : %.tsv %
 	@ mkdir -p $(shell echo $@ | sed -e 's/-/\//g')
-	@ for i in $</*.jpg; do make `echo $$i | sed -e 's/..\/reference/hogs/' -e 's/.jpg/.npy/'` ; done
-	touch $@
-
-sifts-% : ../reference/%
-	@ mkdir -p $(shell echo $@ | sed -e 's/-/\//g')
-	@ for i in $</*.jpg; do make `echo $$i | sed -e 's/..\/reference/sifts/' -e 's/.jpg/.npy/'` ; done
+	@ cut -f1 $< | ./randomize_lines.py | while read i; do mkdir -p $(shell echo $@ | cut -d'-' -f1)/`dirname $$i` ; make $(shell echo $@ | cut -d'-' -f1)/$$i.npy ; done
 	touch $@
 
 clean :

@@ -7,24 +7,22 @@ sift-features : sifts/test.txt sifts/train.txt sifts/means.npy sifts/means.flann
 hogs/%.txt sifts/%.txt : %.txt
 	@ mkdir -p $(dir $@)
 	rm -f $@
-	@ while read line; do \
-		echo make $(BASEDIR)/learn/$(dir $@)/$(REFERENCE)/`basename $$line | sed -e 's/.jpg$$/.npy/'` ; \
-		make $(BASEDIR)/learn/$(dir $@)/$(REFERENCE)/`basename $$line | sed -e 's/.jpg$$/.npy/'` ; \
-		echo "echo $(BASEDIR)/learn/$(dir $@)/$(REFERENCE)/`basename $$line | sed -e 's/.jpg$$/.npy/'` >> $@" ; \
-		echo $(BASEDIR)/learn/$(dir $@)/$(REFERENCE)/`basename $$line | sed -e 's/.jpg$$/.npy/'` >> $@ ; \
-	done < $<
+	@ tr '\t' ',' < $< | while read line; do \
+		echo file=`echo $$line | cut -d',' -f1` ; \
+		file=`echo $$line | cut -d',' -f1` ; \
+		echo class=`echo $$line | cut -d',' -f2` ; \
+		class=`echo $$line | cut -d',' -f2` ; \
+		echo make -C $(BASEDIR)/learn `python -c "import os ; print os.path.normpath('$(dir $@)/$${file}.npy')"`; \
+		make -C $(BASEDIR)/learn `python -c "import os ; print os.path.normpath('$(dir $@)/$${file}.npy')"`; \
+		echo "echo `python -c "import os ; print os.path.abspath('$(BASEDIR)/learn/$(dir $@)/$${file}.npy')"`,$$class | tr ',' '\t' >> $@" ; \
+		echo `python -c "import os ; print os.path.abspath('$(BASEDIR)/learn/$(dir $@)/$${file}.npy')"`,$$class | tr ',' '\t' >> $@ ; \
+	done
 
-$(BASEDIR)/learn/hogs/$(REFERENCE)/%.npy :
-	make -C $(BASEDIR)/learn hogs/$(REFERENCE)/$(notdir $@)
-
-$(BASEDIR)/learn/sifts/$(REFERENCE)/%.npy :
-	make -C $(BASEDIR)/learn sifts/$(REFERENCE)/$(notdir $@)
-
-hogs/means.npy : %/train.txt
+hogs/means.npy : hogs/train.txt
 	@ mkdir -p $(dir $@)
 	$(PYTHON) $(BASEDIR)/learn/sample_k_means.py $(MEANS) $(HOG_PERCENTAGE) $(HOG_DIMENSIONS) $@ $<
 
-sifts/means.npy : %/train.txt
+sifts/means.npy : sifts/train.txt
 	@ mkdir -p $(dir $@)
 	$(PYTHON) $(BASEDIR)/learn/sample_k_means.py $(MEANS) $(SIFT_PERCENTAGE) $(SIFT_DIMENSIONS) $@ $<
 

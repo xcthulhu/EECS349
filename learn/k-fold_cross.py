@@ -28,7 +28,7 @@ def flatten(lst):
 if __name__ == "__main__":
   k = int(sys.argv[1])+1
   # Get files and randomize
-  files = glob.glob(sys.argv[2])
+  files = [l.strip() for l in open(sys.argv[2]).readlines()]
   shuffle(files)
   # Break files up into k folds
   folds = list(chunks(files,k))
